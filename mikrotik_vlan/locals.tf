@@ -41,22 +41,7 @@ locals {
     vlan_key => cidrhost(subnet, 1)
   }
 
-  # Static routes for inter-VLAN routing
-  static_routes = flatten([
-    for vlan_key, vlan in var.vlans : [
-      for other_vlan_key, other_vlan in var.vlans :
-      vlan_key != other_vlan_key ? {
-        dst_network = other_vlan.vlan_subnet
-        gateway     = local.vlan_gateways[vlan_key] # Gateway IP for the originating VLAN
-      } : null
-    ]
-  ])
-
-  static_routes_map = {
-    for idx, route in local.static_routes_filtered :
-    "${route.dst_network}_${idx}" => route
+  interface_pvid_map = {
+    for item in local.untagged_interfaces : item.interface => item.vlan_id
   }
-
-  # Filter out any null entries created by the self-route condition
-  static_routes_filtered = [for route in local.static_routes : route if route != null]
 }

@@ -8,15 +8,14 @@ resource "routeros_interface_vlan" "vlan" {
   use_service_tag = false
 }
 
-# Dynamic bridge port assignments for untagged interfaces on main_bridge, enabling hardware offloading
-resource "routeros_bridge_port" "untagged_ports" {
-  for_each = { for iface in local.untagged_interfaces : iface.interface => iface }
+# Add all relevant physical interfaces to the bridge
+resource "routeros_bridge_port" "physical_bridge_ports" {
+  for_each = local.physical_interfaces # Iterate over unique physical interface names
 
   bridge    = var.bridge_name
-  interface = each.value.interface
-  pvid      = each.value.pvid
+  interface = each.key # each.key will be the interface name, e.g., "ether2"
+  pvid      = lookup(local.interface_pvid_map, each.key, 1) # Default to PVID 1 if not an explicitly untagged port
   hw        = true
-  horizon   = 1
 }
 
 # Bridge VLAN configurations for each VLAN on main_bridge
@@ -63,12 +62,12 @@ resource "routeros_ip_route" "route_to_192_168_0" {
 #   distance    = 1
 # }
 
-# Assign the CIDR 192.168.0.0/24 to ether1
-resource "routeros_ip_address" "ether1_ip" {
-  address   = "192.168.0.0/24"
-  interface = "ether1"
-
-  lifecycle {
-    ignore_changes = [address]
-  }
-}
+# # Assign the CIDR 192.168.0.0/24 to ether1
+# resource "routeros_ip_address" "ether1_ip" {
+#   address   = "192.168.0.0/24"
+#   interface = "ether1"
+#
+#   lifecycle {
+#     ignore_changes = [address]
+#   }
+# }
